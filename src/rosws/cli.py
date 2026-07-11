@@ -171,7 +171,7 @@ def get_all_repos_in_source_path(source_path: str) -> set[str]:
     if not source_path.exists() or not source_path.is_dir():
         raise ValueError(f"Source path does not exist or is not a directory: {source_path}")
 
-    repos = set([])
+    repos = set()
     for item in source_path.iterdir():
         if item.is_dir() and (item / ".git").exists():
             repos.add(Path(item).name)
@@ -231,7 +231,7 @@ def load_config(config_path: Optional[str]) -> Config:
 
     return Config(source_path=source_path, workspace_path=workspace_path, repos=parsed_repos)
 
-if __name__ == '__main__':
+def main():
     parser = ArgumentParser(description='rosws command line tool')
     parser.add_argument('--config', '-c', type=str, help='Path to the user configuration file', required=False)
 
@@ -270,5 +270,8 @@ if __name__ == '__main__':
     try:
         args.func(args)
     except Exception as e:
-        print("Error: %s" % e)
+        print(f"Error: {e}")
         exit(1)
+
+if __name__ == '__main__':
+    main()
