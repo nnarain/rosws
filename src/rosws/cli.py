@@ -231,7 +231,7 @@ def load_config(config_path: Optional[str]) -> Config:
 
     return Config(source_path=source_path, workspace_path=workspace_path, repos=parsed_repos)
 
-if __name__ == '__main__':
+def main():
     parser = ArgumentParser(description='rosws command line tool')
     parser.add_argument('--config', '-c', type=str, help='Path to the user configuration file', required=False)
 
@@ -272,3 +272,6 @@ if __name__ == '__main__':
     except Exception as e:
         print("Error: %s" % e)
         exit(1)
+
+if __name__ == '__main__':
+    main()
