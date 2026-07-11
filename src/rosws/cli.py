@@ -171,7 +171,7 @@ def get_all_repos_in_source_path(source_path: str) -> set[str]:
     if not source_path.exists() or not source_path.is_dir():
         raise ValueError(f"Source path does not exist or is not a directory: {source_path}")
 
-    repos = set([])
+    repos = set()
     for item in source_path.iterdir():
         if item.is_dir() and (item / ".git").exists():
             repos.add(Path(item).name)
@@ -270,7 +270,7 @@ def main():
     try:
         args.func(args)
     except Exception as e:
-        print("Error: %s" % e)
+        print(f"Error: {e}")
         exit(1)
 
 if __name__ == '__main__':
