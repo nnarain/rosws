@@ -36,6 +36,13 @@ rosws add <name> <repo[:branch]>
 rosws rm <name>
 ```
 
+**list** / **ls** – List all workspaces, printing the description from `metadata.yaml` when available:
+
+```bash
+rosws list
+rosws ls
+```
+
 ## Configuration
 
 By default, `rosws` reads its configuration from `~/.config/rosws/config.yaml`.

@@ -68,5 +68,86 @@ class CreateWorkspaceTests(unittest.TestCase):
             )
 
 
+class ListWorkspacesTests(unittest.TestCase):
+    def _printed_lines(self, mock_print):
+        return [str(c.args[0]) for c in mock_print.call_args_list]
+
+    def test_list_workspaces_with_description(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            workspaces_path = tmp_path / "workspaces"
+            config = cli.Config(
+                source_path=str(tmp_path / "source"),
+                workspace_path=str(workspaces_path),
+                repos={},
+            )
+
+            ws1 = workspaces_path / "alpha"
+            ws1.mkdir(parents=True)
+            (ws1 / "metadata.yaml").write_text(
+                "name: alpha\ndescription: Alpha workspace\n", encoding="utf-8"
+            )
+
+            ws2 = workspaces_path / "beta"
+            ws2.mkdir()
+            (ws2 / "metadata.yaml").write_text("name: beta\n", encoding="utf-8")
+
+            with patch("builtins.print") as mock_print:
+                cli.list_workspaces(config)
+
+            calls = self._printed_lines(mock_print)
+            self.assertIn("alpha - Alpha workspace", calls)
+            self.assertIn("beta", calls)
+            # alpha should appear before beta (sorted)
+            self.assertLess(calls.index("alpha - Alpha workspace"), calls.index("beta"))
+
+    def test_list_workspaces_empty(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            workspaces_path = tmp_path / "workspaces"
+            workspaces_path.mkdir()
+            config = cli.Config(
+                source_path=str(tmp_path / "source"),
+                workspace_path=str(workspaces_path),
+                repos={},
+            )
+
+            with patch("builtins.print") as mock_print:
+                cli.list_workspaces(config)
+
+            mock_print.assert_called_once_with("No workspaces found.")
+
+    def test_list_workspaces_invalid_path(self):
+        config = cli.Config(
+            source_path="/nonexistent/source",
+            workspace_path="/nonexistent/workspaces",
+            repos={},
+        )
+        with self.assertRaises(ValueError):
+            cli.list_workspaces(config)
+
+    def test_cli_list_command(self):
+        with patch("rosws.cli.load_config") as load_config, patch("rosws.cli.list_workspaces") as list_workspaces:
+            load_config.return_value = cli.Config(
+                source_path="/tmp/source", workspace_path="/tmp/workspaces", repos={}
+            )
+
+            with patch("sys.argv", ["rosws", "list"]):
+                cli.main()
+
+            list_workspaces.assert_called_once_with(load_config.return_value)
+
+    def test_cli_ls_alias(self):
+        with patch("rosws.cli.load_config") as load_config, patch("rosws.cli.list_workspaces") as list_workspaces:
+            load_config.return_value = cli.Config(
+                source_path="/tmp/source", workspace_path="/tmp/workspaces", repos={}
+            )
+
+            with patch("sys.argv", ["rosws", "ls"]):
+                cli.main()
+
+            list_workspaces.assert_called_once_with(load_config.return_value)
+
+
 if __name__ == "__main__":
     unittest.main()

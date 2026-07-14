@@ -46,6 +46,10 @@ def cmd_rm(args):
     config = load_config(args.config)
     remove_workspace(args.name, config)
 
+def cmd_list(args):
+    config = load_config(args.config)
+    list_workspaces(config)
+
 def parse_repo_args(repo_args: list[str]) -> tuple[list[str], dict[str, str]]:
     """Parse a list of 'repo' or 'repo:branch' strings.
 
@@ -161,6 +165,30 @@ def remove_workspace(name: str, config: Config):
     # Remove the workspace directory
     shutil.rmtree(workspace_path)
     print(f"Removed workspace '{name}'")
+
+def list_workspaces(config: Config):
+    workspace_root = Path(config.workspace_path)
+    if not workspace_root.exists() or not workspace_root.is_dir():
+        raise ValueError(f"Workspace path does not exist or is not a directory: {workspace_root}")
+
+    workspaces = sorted((p for p in workspace_root.iterdir() if p.is_dir()), key=lambda p: p.name)
+    if not workspaces:
+        print("No workspaces found.")
+        return
+
+    for workspace_path in workspaces:
+        metadata_path = workspace_path / "metadata.yaml"
+        description = None
+        if metadata_path.exists():
+            with metadata_path.open("r", encoding="utf-8") as f:
+                metadata = yaml.safe_load(f)
+            if isinstance(metadata, dict):
+                description = metadata.get("description")
+
+        if description:
+            print(f"{workspace_path.name} - {description}")
+        else:
+            print(workspace_path.name)
 
 def get_current_branch(repo_path: Path) -> str:
     if not repo_path.exists() or not repo_path.is_dir():
@@ -282,6 +310,10 @@ def main():
     rm_parser = subparsers.add_parser('rm', help='Remove a workspace and its worktrees')
     rm_parser.add_argument('name', type=str, help='Name of the workspace to remove')
     rm_parser.set_defaults(func=cmd_rm)
+
+    # list subcommand (also aliased as 'ls')
+    list_parser = subparsers.add_parser('list', aliases=['ls'], help='List all workspaces')
+    list_parser.set_defaults(func=cmd_list)
 
     args, extras = parser.parse_known_args()
     if extras:
