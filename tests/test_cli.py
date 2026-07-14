@@ -49,7 +49,7 @@ class CreateWorkspaceTests(unittest.TestCase):
                 {"name": "demo"},
             )
 
-    def test_main_passes_description_to_create_workspace(self):
+    def test_cli_passes_description_argument(self):
         with patch("rosws.cli.load_config") as load_config, patch("rosws.cli.create_workspace") as create_workspace:
             load_config.return_value = cli.Config(source_path="/tmp/source", workspace_path="/tmp/workspaces", repos={})
 
