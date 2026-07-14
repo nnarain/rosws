@@ -19,8 +19,10 @@ rosws [-c CONFIG] <command> [options]
 **create** – Create a new workspace with git worktrees for the specified repositories:
 
 ```bash
-rosws create <name> [repo[:branch] ...]
+rosws create <name> [--description DESCRIPTION] [repo[:branch] ...]
 ```
+
+Workspace creation also writes a `metadata.yaml` file into the workspace root. When provided, the optional description is saved there.
 
 **add** – Add a repository worktree to an existing workspace:
 
