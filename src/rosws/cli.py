@@ -35,7 +35,7 @@ class Config:
 def cmd_create(args):
     config = load_config(args.config)
     repos, branches = parse_repo_args(args.repos)
-    create_workspace(args.name, repos, branches, config)
+    create_workspace(args.name, repos, branches, config, args.description)
 
 def cmd_add(args):
     config = load_config(args.config)
@@ -66,13 +66,25 @@ def parse_repo_args(repo_args: list[str]) -> tuple[list[str], dict[str, str]]:
             repos.append(entry.strip())
     return repos, branches
 
-def create_workspace(name: str, repos: list[str], branches: dict[str, str], config: Config):
+def write_workspace_metadata(workspace_path: Path, name: str, description: Optional[str]):
+    metadata = {"name": name}
+    if description:
+        metadata["description"] = description
+
+    metadata_path = workspace_path / "metadata.yaml"
+    with metadata_path.open("w", encoding="utf-8") as f:
+        yaml.safe_dump(metadata, f, sort_keys=False)
+
+def create_workspace(
+    name: str, repos: list[str], branches: dict[str, str], config: Config, description: Optional[str] = None
+):
     print(f"Creating workspace '{name}' with repositories {repos}")
     print(f"Using source path: {config.source_path}")
     print(f"Using workspace path: {config.workspace_path}")
     # Create the workspace directory under the configured directory for workspaces
     workspace_path = Path(config.workspace_path) / name
     os.makedirs(workspace_path, exist_ok=True)
+    write_workspace_metadata(workspace_path, name, description)
 
     # Create the source directory under the configured directory for source code
     workspace_source_path = workspace_path / "src"
@@ -242,6 +254,12 @@ def main():
     create_parser = subparsers.add_parser('create', help='Create a new workspace')
     create_parser.add_argument('name', type=str, help='Name of the workspace')
     create_parser.add_argument(
+        '--description',
+        type=str,
+        required=False,
+        help='Optional workspace description saved to metadata.yaml',
+    )
+    create_parser.add_argument(
         'repos',
         nargs='*',
         metavar='repo[:branch]',
@@ -265,7 +283,12 @@ def main():
     rm_parser.add_argument('name', type=str, help='Name of the workspace to remove')
     rm_parser.set_defaults(func=cmd_rm)
 
-    args = parser.parse_args()
+    args, extras = parser.parse_known_args()
+    if extras:
+        if args.command == "create" and all(not extra.startswith("-") for extra in extras):
+            args.repos.extend(extras)
+        else:
+            parser.error(f"unrecognized arguments: {' '.join(extras)}")
 
     try:
         args.func(args)
