@@ -283,6 +283,7 @@ def main():
     create_parser.add_argument('name', type=str, help='Name of the workspace')
     create_parser.add_argument(
         '--description',
+        '-d',
         type=str,
         required=False,
         help='Optional workspace description saved to metadata.yaml',
