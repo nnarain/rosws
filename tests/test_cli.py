@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 from unittest.mock import patch
 
@@ -147,6 +148,48 @@ class ListWorkspacesTests(unittest.TestCase):
                 cli.main()
 
             list_workspaces.assert_called_once_with(load_config.return_value)
+
+
+class WorkspaceCompleterTests(unittest.TestCase):
+    def _write_config(self, config_path: Path, workspaces_path: Path, source_path: Path):
+        config_path.write_text(
+            f"workspace: {workspaces_path}\nrepos:\n  source: {source_path}\n  repos: {{}}\n",
+            encoding="utf-8",
+        )
+
+    def test_completer_returns_matching_workspaces(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            workspaces_path = tmp_path / "workspaces"
+            (workspaces_path / "alpha").mkdir(parents=True)
+            (workspaces_path / "beta").mkdir()
+            (workspaces_path / "gamma").mkdir()
+
+            config_path = tmp_path / "config.yaml"
+            self._write_config(config_path, workspaces_path, tmp_path / "source")
+
+            parsed_args = unittest.mock.Mock(config=str(config_path))
+            result = cli.workspace_completer("al", parsed_args)
+            self.assertEqual(result, ["alpha"])
+
+    def test_completer_returns_all_workspaces_on_empty_prefix(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            workspaces_path = tmp_path / "workspaces"
+            (workspaces_path / "alpha").mkdir(parents=True)
+            (workspaces_path / "beta").mkdir()
+
+            config_path = tmp_path / "config.yaml"
+            self._write_config(config_path, workspaces_path, tmp_path / "source")
+
+            parsed_args = unittest.mock.Mock(config=str(config_path))
+            result = sorted(cli.workspace_completer("", parsed_args))
+            self.assertEqual(result, ["alpha", "beta"])
+
+    def test_completer_returns_empty_on_config_error(self):
+        parsed_args = unittest.mock.Mock(config="/nonexistent/config.yaml")
+        result = cli.workspace_completer("", parsed_args)
+        self.assertEqual(result, [])
 
 
 if __name__ == "__main__":

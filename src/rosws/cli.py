@@ -12,6 +12,7 @@ import shutil
 import subprocess
 from argparse import ArgumentParser
 from dataclasses import dataclass
+import argcomplete
 import yaml
 from pathlib import Path
 from typing import Optional
@@ -271,6 +272,28 @@ def load_config(config_path: Optional[str]) -> Config:
 
     return Config(source_path=source_path, workspace_path=workspace_path, repos=parsed_repos)
 
+def workspace_completer(prefix, parsed_args, **kwargs):
+    """Return workspace names from the configured workspace path that match the given prefix.
+
+    Args:
+        prefix: Partial workspace name typed so far.
+        parsed_args: Partially parsed argument namespace; may contain a ``config`` attribute
+            with the path to the rosws config file.
+        **kwargs: Additional keyword arguments passed by argcomplete (unused).
+
+    Returns:
+        A list of workspace directory names that start with *prefix*, or an empty list
+        if the config cannot be loaded or the workspace directory is unavailable.
+    """
+    try:
+        config = load_config(getattr(parsed_args, 'config', None))
+        workspace_root = Path(config.workspace_path)
+        if workspace_root.exists() and workspace_root.is_dir():
+            return [p.name for p in workspace_root.iterdir() if p.is_dir() and p.name.startswith(prefix)]
+    except (FileNotFoundError, PermissionError, ValueError, yaml.YAMLError, OSError):
+        pass
+    return []
+
 def main():
     parser = ArgumentParser(description='rosws command line tool')
     parser.add_argument('--config', '-c', type=str, help='Path to the user configuration file', required=False)
@@ -298,7 +321,7 @@ def main():
 
     # add subcommand
     add_parser = subparsers.add_parser('add', help='Add a repository to an existing workspace')
-    add_parser.add_argument('name', type=str, help='Name of the workspace')
+    add_parser.add_argument('name', type=str, help='Name of the workspace').completer = workspace_completer
     add_parser.add_argument(
         'repo',
         type=str,
@@ -309,12 +332,14 @@ def main():
 
     # rm subcommand
     rm_parser = subparsers.add_parser('rm', help='Remove a workspace and its worktrees')
-    rm_parser.add_argument('name', type=str, help='Name of the workspace to remove')
+    rm_parser.add_argument('name', type=str, help='Name of the workspace to remove').completer = workspace_completer
     rm_parser.set_defaults(func=cmd_rm)
 
     # list subcommand (also aliased as 'ls')
     list_parser = subparsers.add_parser('list', aliases=['ls'], help='List all workspaces')
     list_parser.set_defaults(func=cmd_list)
+
+    argcomplete.autocomplete(parser)
 
     args, extras = parser.parse_known_args()
     if extras:
