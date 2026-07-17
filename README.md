@@ -5,7 +5,7 @@ Git Worktree and ROS Workspace Management Tool
 ## Installation
 
 ```bash
-pip install .
+pipx install .
 ```
 
 ## Usage
