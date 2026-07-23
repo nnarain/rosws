@@ -138,10 +138,13 @@ def add_worktree(
     workspace_repo_path = workspace_source_path / repo
     # Feature branch name for the worktree
     branch_name = workspace_name
-    subprocess.run(
-        ["git", "-C", str(repo_source_path), "worktree", "add", str(workspace_repo_path), "-b", branch_name, base_branch],
-        check=True,
-    )
+    worktree_add_cmd = ["git", "-C", str(repo_source_path), "worktree", "add", str(workspace_repo_path)]
+    if branch_exists(repo_source_path, branch_name):
+        worktree_add_cmd.append(branch_name)
+    else:
+        worktree_add_cmd.extend(["-b", branch_name, base_branch])
+
+    subprocess.run(worktree_add_cmd, check=True)
 
 def remove_workspace(name: str, config: Config):
     workspace_path = Path(config.workspace_path) / name
@@ -206,6 +209,18 @@ def get_current_branch(repo_path: Path) -> str:
     if not result:
         raise RuntimeError(f"Failed to get current branch for repository at {repo_path}")
     return result
+
+def branch_exists(repo_path: Path, branch_name: str) -> bool:
+    if not repo_path.exists() or not repo_path.is_dir():
+        raise ValueError(f"Repository path does not exist or is not a directory: {repo_path}")
+    if not (repo_path / ".git").exists():
+        raise ValueError(f"Repository path is not a git repository: {repo_path}")
+
+    result = subprocess.run(
+        ["git", "-C", str(repo_path), "show-ref", "--verify", "--quiet", f"refs/heads/{branch_name}"],
+        check=False,
+    )
+    return result.returncode == 0
 
 def get_all_repos_in_source_path(source_path: str) -> set[str]:
     source_path = Path(source_path)
