@@ -60,7 +60,7 @@ class CreateWorkspaceTests(unittest.TestCase):
             workspace_source_path.mkdir(parents=True)
 
             with patch("rosws.cli.get_current_branch", return_value="main"), patch("rosws.cli.subprocess.run") as run:
-                run.side_effect = [unittest.mock.Mock(returncode=1), None]
+                run.side_effect = [unittest.mock.Mock(returncode=1), unittest.mock.Mock(returncode=0)]
 
                 cli.add_worktree(
                     "demo",
@@ -114,7 +114,7 @@ class CreateWorkspaceTests(unittest.TestCase):
             workspace_source_path.mkdir(parents=True)
 
             with patch("rosws.cli.get_current_branch", return_value="main"), patch("rosws.cli.subprocess.run") as run:
-                run.side_effect = [unittest.mock.Mock(returncode=0), None]
+                run.side_effect = [unittest.mock.Mock(returncode=0), unittest.mock.Mock(returncode=0)]
 
                 cli.add_worktree(
                     "demo",

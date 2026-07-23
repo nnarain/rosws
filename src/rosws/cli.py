@@ -194,11 +194,14 @@ def list_workspaces(config: Config):
         else:
             print(workspace_path.name)
 
-def get_current_branch(repo_path: Path) -> str:
+def validate_git_repo_path(repo_path: Path):
     if not repo_path.exists() or not repo_path.is_dir():
         raise ValueError(f"Repository path does not exist or is not a directory: {repo_path}")
     if not (repo_path / ".git").exists():
         raise ValueError(f"Repository path is not a git repository: {repo_path}")
+
+def get_current_branch(repo_path: Path) -> str:
+    validate_git_repo_path(repo_path)
 
     result = subprocess.run(
         ["git", "-C", str(repo_path), "branch", "--show-current"],
@@ -211,10 +214,7 @@ def get_current_branch(repo_path: Path) -> str:
     return result
 
 def branch_exists(repo_path: Path, branch_name: str) -> bool:
-    if not repo_path.exists() or not repo_path.is_dir():
-        raise ValueError(f"Repository path does not exist or is not a directory: {repo_path}")
-    if not (repo_path / ".git").exists():
-        raise ValueError(f"Repository path is not a git repository: {repo_path}")
+    validate_git_repo_path(repo_path)
 
     result = subprocess.run(
         ["git", "-C", str(repo_path), "show-ref", "--verify", "--quiet", f"refs/heads/{branch_name}"],
