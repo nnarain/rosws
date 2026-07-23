@@ -50,6 +50,112 @@ class CreateWorkspaceTests(unittest.TestCase):
                 {"name": "demo"},
             )
 
+    def test_add_worktree_creates_workspace_branch_when_missing(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            source_path = tmp_path / "source"
+            workspace_source_path = tmp_path / "workspaces" / "demo" / "src"
+            repo_source_path = source_path / "repo1"
+            (repo_source_path / ".git").mkdir(parents=True)
+            workspace_source_path.mkdir(parents=True)
+
+            with patch("rosws.cli.get_current_branch", return_value="main"), patch("rosws.cli.subprocess.run") as run:
+                run.side_effect = [unittest.mock.Mock(returncode=1), unittest.mock.Mock(returncode=0)]
+
+                cli.add_worktree(
+                    "demo",
+                    "repo1",
+                    None,
+                    source_path,
+                    {"repo1"},
+                    workspace_source_path,
+                    cli.Config(source_path=str(source_path), workspace_path=str(tmp_path / "workspaces"), repos={}),
+                )
+
+            self.assertEqual(
+                run.call_args_list,
+                [
+                    unittest.mock.call(
+                        [
+                            "git",
+                            "-C",
+                            str(repo_source_path),
+                            "show-ref",
+                            "--verify",
+                            "--quiet",
+                            "refs/heads/demo",
+                        ],
+                        check=False,
+                    ),
+                    unittest.mock.call(
+                        [
+                            "git",
+                            "-C",
+                            str(repo_source_path),
+                            "worktree",
+                            "add",
+                            str(workspace_source_path / "repo1"),
+                            "-b",
+                            "demo",
+                            "main",
+                        ],
+                        check=True,
+                    ),
+                ],
+            )
+
+    def test_add_worktree_reuses_existing_workspace_branch(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            source_path = tmp_path / "source"
+            workspace_source_path = tmp_path / "workspaces" / "demo" / "src"
+            repo_source_path = source_path / "repo1"
+            (repo_source_path / ".git").mkdir(parents=True)
+            workspace_source_path.mkdir(parents=True)
+
+            with patch("rosws.cli.get_current_branch", return_value="main"), patch("rosws.cli.subprocess.run") as run:
+                run.side_effect = [unittest.mock.Mock(returncode=0), unittest.mock.Mock(returncode=0)]
+
+                cli.add_worktree(
+                    "demo",
+                    "repo1",
+                    None,
+                    source_path,
+                    {"repo1"},
+                    workspace_source_path,
+                    cli.Config(source_path=str(source_path), workspace_path=str(tmp_path / "workspaces"), repos={}),
+                )
+
+            self.assertEqual(
+                run.call_args_list,
+                [
+                    unittest.mock.call(
+                        [
+                            "git",
+                            "-C",
+                            str(repo_source_path),
+                            "show-ref",
+                            "--verify",
+                            "--quiet",
+                            "refs/heads/demo",
+                        ],
+                        check=False,
+                    ),
+                    unittest.mock.call(
+                        [
+                            "git",
+                            "-C",
+                            str(repo_source_path),
+                            "worktree",
+                            "add",
+                            str(workspace_source_path / "repo1"),
+                            "demo",
+                        ],
+                        check=True,
+                    ),
+                ],
+            )
+
     def test_cli_passes_description_argument(self):
         with patch("rosws.cli.load_config") as load_config, patch("rosws.cli.create_workspace") as create_workspace:
             load_config.return_value = cli.Config(source_path="/tmp/source", workspace_path="/tmp/workspaces", repos={})
